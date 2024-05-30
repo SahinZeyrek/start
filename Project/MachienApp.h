@@ -4,6 +4,7 @@
 #include "MachienRenderer.h"
 #include "MachienObject.h"
 #include "MachienObject2D.h"
+#include "MachienTexture.h"
 #include "MachienDescriptors.h"
 
 #include <memory>
@@ -27,6 +28,7 @@ namespace machien
 
 		void Run();
 	private:
+		void LoadTextures();
 		void LoadObjects();
 		MachienWindow m_Window{ Width,Height,"2DAE15 Sahin Zeyrek - Vulkan Milestone" };
 		MachienDevice m_Device{ m_Window };
@@ -36,6 +38,7 @@ namespace machien
 		std::vector<MachienObject> m_Objects;
 		std::vector<MachienObject2D> m_Objects2D;
 
+		std::unique_ptr<MachienTexture> m_AlbedoTexture;
 	};
 
 }

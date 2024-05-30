@@ -30,6 +30,7 @@ namespace machien
 						   .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MachienSwapChain::MAX_FRAMES_IN_FLIGHT)
 						   .addPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MachienSwapChain::MAX_FRAMES_IN_FLIGHT)
 						   .build();
+		LoadTextures();
 		LoadObjects();
 		// Load Texture function 
 
@@ -50,22 +51,31 @@ namespace machien
 			uboBuffers[i]->map();
 		}
 		
-		auto descriptorSetLayout = MachienDescriptorSetLayout::Builder(m_Device)
+		auto allPurposeSetLayout = MachienDescriptorSetLayout::Builder(m_Device)
 			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+			.addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
 			.build();
 
 		std::vector<VkDescriptorSet> descriptorSets{ MachienSwapChain::MAX_FRAMES_IN_FLIGHT };
+
 		for (size_t i = 0; i < descriptorSets.size(); i++)
 		{
+			VkDescriptorImageInfo albedoInfo
+			{
+			.sampler = m_AlbedoTexture->GetTextureSampler(),
+			.imageView = m_AlbedoTexture->GetTextureImageView(),
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			};
 			auto bufferInfo = uboBuffers[i]->descriptorInfo();
-			MachienDescriptorWriter(*descriptorSetLayout,*m_DescriptorPool)
-				.writeBuffer(0,&bufferInfo)
-				.build(descriptorSets[i]);
+			MachienDescriptorWriter(*allPurposeSetLayout,*m_DescriptorPool)
+								    .writeBuffer(0,&bufferInfo)
+									.writeImage(1,&albedoInfo)
+								    .build(descriptorSets[i]);
 		}
 
 		MachienRenderSystem renderSys{ 
 			m_Device,m_Renderer.GetSwapChainRenderPass() ,
-			descriptorSetLayout->getDescriptorSetLayout()};
+			allPurposeSetLayout->getDescriptorSetLayout()};
         MachienCamera camera{};
         camera.SetViewDirection(glm::vec3( 0.f ), glm::vec3( 0.5f, 0.f, 1.f ));
 
@@ -84,7 +94,7 @@ namespace machien
             currentTime = newTime;
 
             cameraController.MoveInPlaneXZ(m_Window.GetGLFWWindow(), frameTime, cameraObject);
-            camera.SetViewYXZ(cameraObject.Tranform.Translation, cameraObject.Tranform.RadRotation);
+            camera.SetViewYXZ(cameraObject.Transform.Translation, cameraObject.Transform.RadRotation);
             float aspectRatio = m_Renderer.GetAspectRatio();
            // camera.SetOrtoGraphProjection(-aspectRatio, aspectRatio, -1.f, 1.f, -1.f, 1.f);
             camera.SetPerspectiveProjection(glm::radians(50.f), aspectRatio, 0.1f, 10.f);
@@ -110,23 +120,34 @@ namespace machien
 		vkDeviceWaitIdle(m_Device.device());
 	}
 
+	void MachienApp::LoadTextures()
+	{
+		m_AlbedoTexture = std::make_unique < MachienTexture>(m_Device,"resources/vehicle_diffuse.png");
+	}
+
 	void MachienApp::LoadObjects()
 	{
-		std::shared_ptr<MachienModel> catModel = MachienModel::CreateModelFromFile(m_Device, "resources/smooth_vase.obj");
+		std::shared_ptr<MachienModel> catModel = MachienModel::CreateModelFromFile(m_Device, "resources/vehicle.obj");
 		
 		auto cat = MachienObject::CreateObject();
 		cat.Model = catModel;
-		cat.Tranform.Translation = { .0f,2.0f,2.5f };
-		cat.Tranform.Scale = glm::vec3{ 3.f };
+		cat.Transform.Translation = { .0f,2.0f,2.5f };
+		cat.Transform.Scale = glm::vec3{ -0.1f };
+		// Rotation angle in degrees (converted to radians)
+		float angle = glm::radians(180.0f);
+
+		// Apply rotation around the X-axis (pitch)
+		cat.Transform.RadRotation = glm::vec3{ angle, 0.0f, 0.0f };
+
 		m_Objects.push_back(std::move(cat));
 		
 		
-		std::shared_ptr<MachienModel> carModel = MachienModel::CreateModelFromFile(m_Device, "resources/koenigsegg.obj");
+		std::shared_ptr<MachienModel> carModel = MachienModel::CreateModelFromFile(m_Device, "resources/colored_cube.obj");
 		
 		auto car = MachienObject::CreateObject();
 		car.Model = carModel;
-		car.Tranform.Translation = { 0.0f,0.0f,1.5f };
-		car.Tranform.Scale = glm::vec3{ -0.05f };
+		car.Transform.Translation = { 0.0f,0.0f,1.5f };
+		car.Transform.Scale = glm::vec3{ -0.1f };
 		m_Objects.push_back(std::move(car));
 
 		//std::shared_ptr<MachienModel> squareModel = MachienModel::CreateSquare(m_Device, glm::vec2{ 0.5f,0.5f },0.3f, 0.3f);

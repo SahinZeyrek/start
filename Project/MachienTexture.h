@@ -6,12 +6,15 @@ namespace machien
 	class MachienTexture final
 	{
 	public:
-		MachienTexture(MachienDevice& device);
+		MachienTexture(MachienDevice& device, const std::string& texturePath);
 		~MachienTexture();
 
 		void CreateTextureImage(const std::string& texturePath);
 		void CreateTextureImageView();
 		void CreateTextureSampler();
+
+		static VkDescriptorImageInfo CreateDescriptorImageInfo(VkImageLayout layout
+			, VkImageView view, VkSampler sampler);
 
 		VkImageView GetTextureImageView() const;
 		VkSampler GetTextureSampler() const;

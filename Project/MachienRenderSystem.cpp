@@ -85,8 +85,8 @@ namespace machien
 		{
 			PushConstantData data{};
 
-			data.modelMatrix = obj.Tranform.Mat4();
-			data.NormalMatrix = obj.Tranform.NormalMatrix();
+			data.modelMatrix = obj.Transform.Mat4();
+			data.NormalMatrix = obj.Transform.NormalMatrix();
 
 
 			vkCmdPushConstants(frameInfo.CommandBuffer, m_pPipelineLayout,

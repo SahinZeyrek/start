@@ -23,12 +23,12 @@ namespace machien
         }
         if (glm::dot(rotate, rotate) > std::numeric_limits<float>::epsilon())
         {
-            object.Tranform.RadRotation += LookSpeed * dt * glm::normalize(rotate);
+            object.Transform.RadRotation += LookSpeed * dt * glm::normalize(rotate);
         }
-        object.Tranform.RadRotation.x = glm::clamp(object.Tranform.RadRotation.x, -1.5f, 1.5f);
-        object.Tranform.RadRotation.y = glm::mod(object.Tranform.RadRotation.y, glm::two_pi<float>());
+        object.Transform.RadRotation.x = glm::clamp(object.Transform.RadRotation.x, -1.5f, 1.5f);
+        object.Transform.RadRotation.y = glm::mod(object.Transform.RadRotation.y, glm::two_pi<float>());
 
-        float yaw = object.Tranform.RadRotation.y;
+        float yaw = object.Transform.RadRotation.y;
         const glm::vec3 forward{ sin(yaw),0.f,cos(yaw) };
         const glm::vec3 right{ forward.z,0.f,-forward.x };
         const glm::vec3 up{ 0.f,-1.f,0.f };
@@ -43,7 +43,7 @@ namespace machien
 
         if (glm::dot(moveDir, moveDir) > std::numeric_limits<float>::epsilon())
         {
-            object.Tranform.Translation += MoveSpeed * dt * glm::normalize(moveDir);
+            object.Transform.Translation += MoveSpeed * dt * glm::normalize(moveDir);
         }
 
 

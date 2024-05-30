@@ -8,10 +8,9 @@ namespace machien {
     // *************** Descriptor Set Layout Builder *********************
 
     MachienDescriptorSetLayout::Builder& MachienDescriptorSetLayout::Builder::addBinding(
-        uint32_t binding,
-        VkDescriptorType descriptorType,
-        VkShaderStageFlags stageFlags,
-        uint32_t count) {
+        uint32_t binding, VkDescriptorType descriptorType,
+         VkShaderStageFlags stageFlags, uint32_t count)
+    {
         assert(bindings.count(binding) == 0 && "Binding already in use");
         VkDescriptorSetLayoutBinding layoutBinding{};
         layoutBinding.binding = binding;
@@ -148,7 +147,8 @@ namespace machien
         : setLayout{ setLayout }, pool{ pool } {}
 
     MachienDescriptorWriter& MachienDescriptorWriter::writeBuffer(
-        uint32_t binding, VkDescriptorBufferInfo* bufferInfo) {
+        uint32_t binding, VkDescriptorBufferInfo* bufferInfo) 
+    {
         assert(setLayout.bindings.count(binding) == 1 && "Layout does not contain specified binding");
 
         auto& bindingDescription = setLayout.bindings[binding];

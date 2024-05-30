@@ -5,11 +5,14 @@
 #include <stb_image.h>
 
 #include <stdexcept>
+#include <cassert>
 namespace machien
 {
-	MachienTexture::MachienTexture(MachienDevice& device) : m_Device{device}
+	MachienTexture::MachienTexture(MachienDevice& device, const std::string& filePath) : m_Device{device}
 	{
-		
+		CreateTextureImage(filePath);
+		CreateTextureImageView();
+		CreateTextureSampler();
 	}
 
 	MachienTexture::~MachienTexture()
@@ -27,8 +30,8 @@ namespace machien
 			throw std::runtime_error("failed to load texture image!");
 		}
 		// temporary Staging buffer
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
+		VkBuffer stagingBuffer{};
+		VkDeviceMemory stagingBufferMemory{};
 
 		m_Device.createBuffer(imageSize,VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 		void* data;
@@ -57,11 +60,11 @@ namespace machien
 
 		uint32_t layerCount = 1;
 
+		m_Device.createImageWithInfo(imageInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_Image, m_ImageMemory);
 		m_Device.TransitionImageLayout(m_Image, 
 			VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels, layerCount);
-		m_Device.createImageWithInfo(imageInfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_Image, m_ImageMemory);
-
+		m_Device.copyBufferToImage(stagingBuffer, m_Image, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight), layerCount);
 		// transition image layout for fragment shader
 		m_Device.TransitionImageLayout(m_Image, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipLevels, layerCount);
 		
@@ -74,6 +77,7 @@ namespace machien
 	{
 		uint32_t mipLevels = 1;
 		m_ImageView = m_Device.CreateImageView(m_Image, VK_FORMAT_R8G8B8A8_SRGB);
+		assert(m_ImageView && "failed to create image view");
 	}
 
 	void MachienTexture::CreateTextureSampler()
@@ -106,15 +110,26 @@ namespace machien
 		}
 	}
 
+	VkDescriptorImageInfo MachienTexture::CreateDescriptorImageInfo(VkImageLayout layout 
+												,VkImageView view,VkSampler sampler)
+	{
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.imageLayout = layout;
+		imageInfo.imageView = view;
+		imageInfo.sampler = sampler;
+
+		return imageInfo;
+	}
+
 
 	VkImageView MachienTexture::GetTextureImageView() const
 	{
-		return VkImageView();
+		return m_ImageView;
 	}
 
 	VkSampler MachienTexture::GetTextureSampler() const
 	{
-		return VkSampler();
+		return m_Sampler;
 	}
 
 	void MachienTexture::Cleanup()

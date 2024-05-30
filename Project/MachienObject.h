@@ -32,7 +32,7 @@ namespace machien
 
 		std::shared_ptr<MachienModel> Model{};
 		glm::vec3 Color{};
-		TransformComponent Tranform{};
+		TransformComponent Transform{};
 
 	private:
 		MachienObject(id objId) : m_Id{ objId } {}
