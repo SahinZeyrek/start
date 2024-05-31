@@ -14,8 +14,9 @@ namespace machien
 {
 	struct PushConstantData
 	{
-		glm::mat4 modelMatrix{ 1.f };
-		glm::mat4 NormalMatrix{ 1.f };
+		alignas(16)glm::mat4 modelMatrix{ 1.f };
+		alignas(16)glm::mat4 NormalMatrix{ 1.f };
+
 	};
 
 	MachienRenderSystem::MachienRenderSystem(MachienDevice& device,VkRenderPass renderPass, VkDescriptorSetLayout DescriptorSetLayout) :

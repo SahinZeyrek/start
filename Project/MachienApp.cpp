@@ -18,10 +18,13 @@
 
 namespace machien
 {
+	
 	struct GlobalUBO
 	{
 		glm::mat4 ProjectionView{ 1.f };
-		glm::vec3 LightDirection = glm::normalize(glm::vec3{ 1.f,-3.f,1.f });
+		glm::mat4 InverseProjectionView{ 1.f };
+		glm::vec3 CameraPosition{};
+		int RenderModeEnum{};
 	};
 	MachienApp::MachienApp()
 	{
@@ -54,22 +57,28 @@ namespace machien
 		auto allPurposeSetLayout = MachienDescriptorSetLayout::Builder(m_Device)
 			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
 			.addBinding(1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.addBinding(2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.addBinding(3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+			.addBinding(4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
+
 			.build();
 
 		std::vector<VkDescriptorSet> descriptorSets{ MachienSwapChain::MAX_FRAMES_IN_FLIGHT };
 
 		for (size_t i = 0; i < descriptorSets.size(); i++)
 		{
-			VkDescriptorImageInfo albedoInfo
-			{
-			.sampler = m_AlbedoTexture->GetTextureSampler(),
-			.imageView = m_AlbedoTexture->GetTextureImageView(),
-			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			};
+			VkDescriptorImageInfo albedoInfo = MachienTexture::CreateDescriptorImageInfo(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_AlbedoTexture.get());
+			VkDescriptorImageInfo normalInfo = MachienTexture::CreateDescriptorImageInfo(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_NormalTexture.get());
+			VkDescriptorImageInfo roughnessInfo = MachienTexture::CreateDescriptorImageInfo(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GlossinessTexture.get());
+			VkDescriptorImageInfo specularInfo = MachienTexture::CreateDescriptorImageInfo(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_SpecularTexture.get());
+
 			auto bufferInfo = uboBuffers[i]->descriptorInfo();
 			MachienDescriptorWriter(*allPurposeSetLayout,*m_DescriptorPool)
 								    .writeBuffer(0,&bufferInfo)
 									.writeImage(1,&albedoInfo)
+									.writeImage(2,&normalInfo)
+									.writeImage(3,&roughnessInfo)
+									.writeImage(4,&specularInfo)
 								    .build(descriptorSets[i]);
 		}
 
@@ -77,7 +86,7 @@ namespace machien
 			m_Device,m_Renderer.GetSwapChainRenderPass() ,
 			allPurposeSetLayout->getDescriptorSetLayout()};
         MachienCamera camera{};
-        camera.SetViewDirection(glm::vec3( 0.f ), glm::vec3( 0.5f, 0.f, 1.f ));
+       // camera.SetViewDirection(glm::vec3( 0.f ), glm::vec3( 0.5f, 0.f, 1.f ));
 
         //camera.SetViewTarget(glm::vec3{ -1.f,-2.f,2.f }, glm::vec3{ 0.f,0.f,2.5f });
 
@@ -85,7 +94,9 @@ namespace machien
         MachienKeyboard cameraController{};
 
         auto currentTime = std::chrono::high_resolution_clock::now();
-
+		// RENDER MODE
+		int renderMode{ 0 };
+		constexpr int totalModes{ 5 };
 		while (!m_Window.IsClosed())
 		{
 			glfwPollEvents();
@@ -94,6 +105,7 @@ namespace machien
             currentTime = newTime;
 
             cameraController.MoveInPlaneXZ(m_Window.GetGLFWWindow(), frameTime, cameraObject);
+			cameraController.IncrementRenderMode(m_Window.GetGLFWWindow(), renderMode, totalModes);
             camera.SetViewYXZ(cameraObject.Transform.Translation, cameraObject.Transform.RadRotation);
             float aspectRatio = m_Renderer.GetAspectRatio();
            // camera.SetOrtoGraphProjection(-aspectRatio, aspectRatio, -1.f, 1.f, -1.f, 1.f);
@@ -107,6 +119,9 @@ namespace machien
 				//update
 				GlobalUBO ubo{};
 				ubo.ProjectionView = camera.GetProjection() * camera.GetView();
+				ubo.InverseProjectionView = camera.GetInverseView();
+				ubo.CameraPosition = cameraObject.Transform.Translation;
+				ubo.RenderModeEnum = renderMode;
 				uboBuffers[frameIndex]->writeToBuffer(&ubo);
 				uboBuffers[frameIndex]->flush();
 				//uboBuffers[frameIndex]->flushIndex(frameIndex);
@@ -122,33 +137,45 @@ namespace machien
 
 	void MachienApp::LoadTextures()
 	{
-		m_AlbedoTexture = std::make_unique < MachienTexture>(m_Device,"resources/vehicle_diffuse.png");
+		m_AlbedoTexture = std::make_unique<MachienTexture>(	    m_Device,  "resources/vehicle_diffuse.png" );
+		m_NormalTexture = std::make_unique<MachienTexture>(	    m_Device,  "resources/vehicle_normal.png"  );
+		m_GlossinessTexture = std::make_unique<MachienTexture>( m_Device,  "resources/vehicle_gloss.png"   );
+		m_SpecularTexture = std::make_unique<MachienTexture>(   m_Device,  "resources/vehicle_specular.png");
+
 	}
 
 	void MachienApp::LoadObjects()
 	{
-		std::shared_ptr<MachienModel> catModel = MachienModel::CreateModelFromFile(m_Device, "resources/vehicle.obj");
+		std::shared_ptr<MachienModel> vehicleModel = MachienModel::CreateModelFromFile(m_Device, "resources/vehicle.obj");
 		
-		auto cat = MachienObject::CreateObject();
-		cat.Model = catModel;
-		cat.Transform.Translation = { .0f,2.0f,2.5f };
-		cat.Transform.Scale = glm::vec3{ -0.1f };
+		auto vehicle = MachienObject::CreateObject();
+		vehicle.Model = vehicleModel;
+		vehicle.Transform.Translation = { 0.f,0.f,2.5f };
+		vehicle.Transform.Scale = glm::vec3{ 0.1f };
 		// Rotation angle in degrees (converted to radians)
 		float angle = glm::radians(180.0f);
 
 		// Apply rotation around the X-axis (pitch)
-		cat.Transform.RadRotation = glm::vec3{ angle, 0.0f, 0.0f };
+		vehicle.Transform.RadRotation = glm::vec3{ angle, 0.0f, 0.0f };
 
-		m_Objects.push_back(std::move(cat));
+		m_Objects.push_back(std::move(vehicle));
+
+		std::shared_ptr<MachienModel> sphereModel = MachienModel::CreateCube(m_Device);
+		auto sphere = MachienObject::CreateObject();
+		sphere.Model = sphereModel;
+		sphere.Transform.Translation = { 5.f,0.f,1.f };
+		sphere.Transform.Scale = glm::vec3{ 0.4f };
 		
-		
-		std::shared_ptr<MachienModel> carModel = MachienModel::CreateModelFromFile(m_Device, "resources/colored_cube.obj");
-		
-		auto car = MachienObject::CreateObject();
-		car.Model = carModel;
-		car.Transform.Translation = { 0.0f,0.0f,1.5f };
-		car.Transform.Scale = glm::vec3{ -0.1f };
-		m_Objects.push_back(std::move(car));
+		m_Objects.push_back(std::move(sphere));
+
+		//
+		//std::shared_ptr<MachienModel> carModel = MachienModel::CreateModelFromFile(m_Device, "resources/colored_cube.obj");
+		//
+		//auto car = MachienObject::CreateObject();
+		//car.Model = carModel;
+		//car.Transform.Translation = { 0.0f,0.0f,1.5f };
+		//car.Transform.Scale = glm::vec3{ 0.5f };
+		//m_Objects.push_back(std::move(car));
 
 		//std::shared_ptr<MachienModel> squareModel = MachienModel::CreateSquare(m_Device, glm::vec2{ 0.5f,0.5f },0.3f, 0.3f);
 		//auto square = MachienObject2D::CreateObject();

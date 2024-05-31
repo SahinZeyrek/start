@@ -72,6 +72,7 @@ class MachienDevice {
       VkMemoryPropertyFlags properties,
       VkImage &image,
       VkDeviceMemory &imageMemory);
+
   void SetPhyiscalDeviceProperties(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties properties);
 
   VkPhysicalDevice GetPhysicalDevice() const { return physicalDevice; };

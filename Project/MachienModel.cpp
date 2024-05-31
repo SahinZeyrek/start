@@ -114,10 +114,70 @@ namespace machien
 
 	}
 
+	glm::vec3 MachienModel::CalculateTangent(const glm::vec3& pos0, const glm::vec3& pos1, const glm::vec3& pos2, const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& uv2)
+	{
+		//https://stackoverflow.com/questions/35723318/getting-the-tangent-for-a-object-space-to-texture-space
+		glm::vec3 edge1 = pos1 - pos0;
+		glm::vec3 edge2 = pos2 - pos0;
+
+		glm::vec2 deltaUV1 = uv1 - uv0;
+		glm::vec2 deltaUV2 = uv2 - uv0;
+
+		float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+		glm::vec3 tangent;  
+		tangent.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+		tangent.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+		tangent.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+		return tangent;
+	}
+
+	glm::vec3 MachienModel::GetPosition(const tinyobj::attrib_t& attrib, int index)
+	{
+		return glm::vec3(
+			attrib.vertices[3 * index + 0],
+			attrib.vertices[3 * index + 1],
+			attrib.vertices[3 * index + 2]
+		);
+	}
+
+	glm::vec3 MachienModel::GetNormal(const tinyobj::attrib_t& attrib, int index)
+	{
+		return glm::vec3(
+			attrib.normals[3 * index + 0],
+			attrib.normals[3 * index + 1],
+			attrib.normals[3 * index + 2]
+		);
+	}
+
+	glm::vec2 MachienModel::GetTexCoord(const tinyobj::attrib_t& attrib, int index)
+	{
+		return glm::vec2(
+			attrib.texcoords[2 * index + 0],
+			attrib.texcoords[2 * index + 1]
+		);
+	}
+
 	std::unique_ptr<MachienModel> MachienModel::CreateModelFromFile(MachienDevice& device, const std::string& filePath)
 	{
 		Builder builder{};
 		builder.LoadModel(filePath);
+		return std::make_unique<MachienModel>(device, builder);
+	}
+
+	std::unique_ptr<MachienModel> MachienModel::CreateCube(MachienDevice& device)
+	{
+
+		Builder builder{};
+		builder.LoadModel("resources/colored_cube.obj");
+		return std::make_unique<MachienModel>(device, builder);
+	}
+
+	std::unique_ptr<MachienModel> MachienModel::CreateSphere(MachienDevice& device)
+	{
+		Builder builder{};
+		builder.LoadModel("resources/sphere.obj");
 		return std::make_unique<MachienModel>(device, builder);
 	}
 
@@ -184,11 +244,13 @@ namespace machien
 			for (const auto& index : shape.mesh.indices)
 			{
 				Vertex vertex{};
+
 				if (index.vertex_index >= 0)
 				{
 					vertex.Position = { attrib.vertices[3 * index.vertex_index + 0],
 										attrib.vertices[3 * index.vertex_index + 1] ,
-										attrib.vertices[3 * index.vertex_index + 2] };
+										attrib.vertices[3 * index.vertex_index + 2] }
+					;
 				}
 				if (index.vertex_index >= 0)
 				{
@@ -204,8 +266,10 @@ namespace machien
 				}
 				if (index.texcoord_index >= 0)
 				{
-					vertex.UV = {		attrib.texcoords[2 * index.texcoord_index + 0],
-										-attrib.texcoords[2 * index.texcoord_index + 1] };
+					vertex.UV = glm::vec2(
+						attrib.texcoords[2 * index.texcoord_index + 0],
+						attrib.texcoords[2 * index.texcoord_index + 1]
+					);
 				}
 				if (uniqueVertices.count(vertex) == 0)
 				{
@@ -213,8 +277,48 @@ namespace machien
 					vertices.push_back(vertex);
 				}
 				indices.push_back(uniqueVertices[vertex]);
+			
 			}
+
+			// tangent calculation 
+			for (auto& vertex : vertices)
+			{
+				vertex.Tangent = glm::vec3(0);
+			}  
+			std::vector<glm::vec3> tan1(vertices.size(), glm::vec3(0.0f));
+
+			for (size_t i = 0; i < indices.size(); i += 3)
+			{
+
+				Vertex& v0 = vertices[indices[i + 0]];
+				Vertex& v1 = vertices[indices[i + 1]];
+				Vertex& v2 = vertices[indices[i + 2]];
+				glm::vec3 tangent = CalculateTangent(v0.Position, v1.Position, v2.Position,
+					v0.UV, v1.UV, v2.UV);
+
+				v0.Tangent += tangent;
+				v1.Tangent += tangent;
+				v2.Tangent += tangent;
+			}
+
+			//for (size_t i = 0; i < vertices.size(); ++i)
+			//{
+			//	glm::vec3 n = vertices[i].Normal;
+			//	glm::vec3 t = tan1[i];
+			//
+			//	// Gram-Schmidt orthogonalize
+			//	vertices[i].Tangent = glm::normalize(t - n * glm::dot(n, t));
+			//
+			//	// Ensure the tangent is orthogonal to the normal
+			//	vertices[i].Tangent = glm::normalize(vertices[i].Tangent);
+			//}
+			for (auto& vertex : vertices)
+			{
+				vertex.Tangent = glm::normalize(vertex.Tangent);
+			}
+
 		}
+
 	}
 
 
@@ -265,6 +369,13 @@ namespace machien
 					.binding = 0,
 					.format = VK_FORMAT_R32G32_SFLOAT,
 					.offset = offsetof(Vertex,UV)
+				},
+					VkVertexInputAttributeDescription
+				{
+					.location = 4,
+					.binding = 0,
+					.format = VK_FORMAT_R32G32B32_SFLOAT,
+					.offset = offsetof(Vertex,Tangent)
 				}
 
 			};

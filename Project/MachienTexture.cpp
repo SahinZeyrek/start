@@ -23,6 +23,7 @@ namespace machien
 	void MachienTexture::CreateTextureImage(const std::string& texturePath)
 	{
 		int texWidth, texHeight, texChannels;
+		stbi_set_flip_vertically_on_load(true);
 		stbi_uc* pixels = stbi_load(texturePath.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 		VkDeviceSize imageSize = texWidth * texHeight * 4;
 
@@ -117,6 +118,17 @@ namespace machien
 		imageInfo.imageLayout = layout;
 		imageInfo.imageView = view;
 		imageInfo.sampler = sampler;
+
+		return imageInfo;
+	}
+
+	VkDescriptorImageInfo MachienTexture::CreateDescriptorImageInfo(VkImageLayout layout, const MachienTexture* texture)
+	{
+
+		VkDescriptorImageInfo imageInfo{};
+		imageInfo.imageLayout = layout;
+		imageInfo.imageView = texture->GetTextureImageView();
+		imageInfo.sampler = texture->GetTextureSampler();
 
 		return imageInfo;
 	}

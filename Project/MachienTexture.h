@@ -16,6 +16,9 @@ namespace machien
 		static VkDescriptorImageInfo CreateDescriptorImageInfo(VkImageLayout layout
 			, VkImageView view, VkSampler sampler);
 
+		static VkDescriptorImageInfo CreateDescriptorImageInfo(VkImageLayout layout
+			, const MachienTexture* texture);
+
 		VkImageView GetTextureImageView() const;
 		VkSampler GetTextureSampler() const;
 		void Cleanup();

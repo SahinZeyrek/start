@@ -17,10 +17,12 @@ namespace machien
 
 		const glm::mat4& GetProjection() const { return m_ProjectionMatrix; }
 		const glm::mat4& GetView() const { return m_ViewMatrix; }
+		const glm::mat4& GetInverseView() const { return m_InverseViewMatrix; }
 
 	private:
 		glm::mat4 m_ProjectionMatrix{ 1.f };
 		glm::mat4 m_ViewMatrix{ 1.f };
+		glm::mat4 m_InverseViewMatrix{ 1.f };
 	};
 }
 

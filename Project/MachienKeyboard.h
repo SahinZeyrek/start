@@ -21,11 +21,13 @@ namespace machien
 			int lookDown = GLFW_KEY_DOWN;
 		};
 		void MoveInPlaneXZ(GLFWwindow* window, float dt, MachienObject& object);
+		void IncrementRenderMode(GLFWwindow* window,int& renderMode, int totalModes);
 		KeyMappings keys{};
 		float MoveSpeed{ 3.f };
 		float LookSpeed{ 10.f };
 	private:
 		double m_LastMouseX{};
 		double m_LastMouseY{};
+		bool m_firstInput{true};
 	};
 }

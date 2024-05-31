@@ -39,6 +39,11 @@ namespace machien
 		std::vector<MachienObject2D> m_Objects2D;
 
 		std::unique_ptr<MachienTexture> m_AlbedoTexture;
+		std::unique_ptr<MachienTexture> m_NormalTexture;
+		std::unique_ptr<MachienTexture> m_GlossinessTexture;
+		std::unique_ptr<MachienTexture> m_SpecularTexture;
+
+
 	};
 
 }
