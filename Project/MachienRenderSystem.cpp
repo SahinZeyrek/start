@@ -66,15 +66,15 @@ namespace machien
 		pipelineConfig.PipelineLayout = m_pPipelineLayout;
 		m_Pipeline = std::make_unique<MachienPipeline>(m_Device, "shaders/shader.vert.spv",
 			"shaders/shader.frag.spv", pipelineConfig,true);
-		//m_2DPipeline = std::make_unique<MachienPipeline>(m_Device, "shaders/2dShader.vert.spv",
-		//	"shaders/2dShader.frag.spv", pipelineConfig,false);
+		m_2DPipeline = std::make_unique<MachienPipeline>(m_Device, "shaders/2dShader.vert.spv",
+			"shaders/2dShader.frag.spv", pipelineConfig,false);
 	}
 
 
-	void MachienRenderSystem::DrawObjects(FrameInfo& frameInfo, std::vector<MachienObject>& objects)
+	void MachienRenderSystem::DrawObjects(FrameInfo& frameInfo, std::vector<MachienObject>& objects, std::vector<MachienObject2D>& objects2D)
 	{
 		m_Pipeline->Bind(frameInfo.CommandBuffer);
-		//auto projectionView = frameInfo.Camera.GetProjection() * frameInfo.Camera.GetView();
+		auto projectionView = frameInfo.Camera.GetProjection() * frameInfo.Camera.GetView();
 
 		vkCmdBindDescriptorSets(
 			frameInfo.CommandBuffer,
@@ -95,20 +95,20 @@ namespace machien
 			obj.Model->Bind(frameInfo.CommandBuffer);
 			obj.Model->Draw(frameInfo.CommandBuffer);
 		}
-		//m_2DPipeline->Bind(commandBuffer);
-		//
-		//for (auto& obj2D : objects2D)
-		//{
-		//	PushConstantData data{};
-		//	auto modelMatrix = obj2D.Tranform.Mat4();
-		//
-		//	data.Transform = projectionView * modelMatrix;
-		//	data.NormalMatrix = obj2D.Tranform.NormalMatrix();
-		//	vkCmdPushConstants(commandBuffer, m_pPipelineLayout,
-		//		VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstantData), &data);
-		//	obj2D.Model->Bind(commandBuffer);
-		//	obj2D.Model->Draw(commandBuffer);
-		//}
+		m_2DPipeline->Bind(frameInfo.CommandBuffer);
+		
+		for (auto& obj2D : objects2D)
+		{
+			PushConstantData data{};
+			auto modelMatrix = obj2D.Tranform.Mat4();
+		
+			data.modelMatrix = projectionView * modelMatrix;
+			data.NormalMatrix = obj2D.Tranform.NormalMatrix();
+			vkCmdPushConstants(frameInfo.CommandBuffer, m_pPipelineLayout,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstantData), &data);
+			obj2D.Model->Bind(frameInfo.CommandBuffer);
+			obj2D.Model->Draw(frameInfo.CommandBuffer);
+		}
 	}
 
 

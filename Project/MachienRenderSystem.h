@@ -23,7 +23,7 @@ namespace machien
 		MachienRenderSystem& operator=(const MachienRenderSystem&) = delete;
 		MachienRenderSystem& operator=(MachienRenderSystem&&) = delete;
 
-		void DrawObjects(FrameInfo& frameInfo , std::vector<MachienObject>& objects);
+		void DrawObjects(FrameInfo& frameInfo , std::vector<MachienObject>& objects, std::vector<MachienObject2D>& objects2D);
 
 	private:
 		void CreatePipelineLayout(VkDescriptorSetLayout DescriptorSetLayout);

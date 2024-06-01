@@ -51,15 +51,19 @@ namespace machien
 
     void MachienKeyboard::IncrementRenderMode(GLFWwindow* window, int& renderMode, int totalModes)
     {
-        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+        if (!(glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE))
         {
             if (m_firstInput)
             {
                 m_firstInput = false;
-                return;
+                renderMode += 1;
+                renderMode %= totalModes;
             }
-            renderMode += 1;
-            renderMode %= totalModes;
+
+            }
+        else
+        {
+            m_firstInput = true;
         }
     }
 

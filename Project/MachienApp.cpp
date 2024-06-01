@@ -25,6 +25,7 @@ namespace machien
 		glm::mat4 InverseProjectionView{ 1.f };
 		glm::vec3 CameraPosition{};
 		int RenderModeEnum{};
+		float deltaTime{};
 	};
 	MachienApp::MachienApp()
 	{
@@ -95,14 +96,17 @@ namespace machien
 
         auto currentTime = std::chrono::high_resolution_clock::now();
 		// RENDER MODE
+		float accumulatedTime = 0.f;
 		int renderMode{ 0 };
-		constexpr int totalModes{ 5 };
+		constexpr int totalModes{ 6 };
 		while (!m_Window.IsClosed())
 		{
 			glfwPollEvents();
             auto newTime = std::chrono::high_resolution_clock::now();
             float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
             currentTime = newTime;
+			accumulatedTime += frameTime;
+			accumulatedTime = fmod(accumulatedTime, 100.f);
 
             cameraController.MoveInPlaneXZ(m_Window.GetGLFWWindow(), frameTime, cameraObject);
 			cameraController.IncrementRenderMode(m_Window.GetGLFWWindow(), renderMode, totalModes);
@@ -122,12 +126,13 @@ namespace machien
 				ubo.InverseProjectionView = camera.GetInverseView();
 				ubo.CameraPosition = cameraObject.Transform.Translation;
 				ubo.RenderModeEnum = renderMode;
+				ubo.deltaTime = accumulatedTime;
 				uboBuffers[frameIndex]->writeToBuffer(&ubo);
 				uboBuffers[frameIndex]->flush();
 				//uboBuffers[frameIndex]->flushIndex(frameIndex);
 				// render
 				m_Renderer.BeginSwapChainRenderPass(commandBuffer);
-				renderSys.DrawObjects(frameInfo, m_Objects);
+				renderSys.DrawObjects(frameInfo, m_Objects,m_Objects2D);
 				m_Renderer.EndSwapChainRenderPass(commandBuffer);
 				m_Renderer.EndFrame();
 			}
@@ -177,21 +182,21 @@ namespace machien
 		//car.Transform.Scale = glm::vec3{ 0.5f };
 		//m_Objects.push_back(std::move(car));
 
-		//std::shared_ptr<MachienModel> squareModel = MachienModel::CreateSquare(m_Device, glm::vec2{ 0.5f,0.5f },0.3f, 0.3f);
-		//auto square = MachienObject2D::CreateObject();
-		//square.Model = squareModel;
-		//square.Tranform.Translation = { 0.5f,0.5f,1.f };
-		//square.Tranform.Scale = glm::vec3{ 1 };
-		//square.Color = { 1.f,1.f,1.f };
-		//m_Objects2D.push_back(std::move(square));
-		//
-		//std::shared_ptr<MachienModel> squareModel2 = MachienModel::CreateSquare(m_Device, glm::vec2{-0.2f,-0.2f}, 0.2f, 0.2f);
-		//auto square2 = MachienObject2D::CreateObject();
-		//square2.Model = squareModel2;
-		//square2.Tranform.Translation = { -0.2f,-0.2f,1.f };
-		//square2.Tranform.Scale = glm::vec3{ 1 };
-		//square2.Color = { 1.f,1.f,1.f };
-		//m_Objects2D.push_back(std::move(square2));
+		std::shared_ptr<MachienModel> squareModel = MachienModel::CreateSquare(m_Device, glm::vec2{ 0.5f,0.5f },0.3f, 0.3f);
+		auto square = MachienObject2D::CreateObject();
+		square.Model = squareModel;
+		square.Tranform.Translation = { 0.2f,0.2f,1.f };
+		square.Tranform.Scale = glm::vec3{ 1 };
+		square.Color = { 1.f,1.f,1.f };
+		m_Objects2D.push_back(std::move(square));
+		
+		std::shared_ptr<MachienModel> squareModel2 = MachienModel::CreateSquare(m_Device, glm::vec2{0.2f,0.5f}, 0.2f, 0.2f);
+		auto square2 = MachienObject2D::CreateObject();
+		square2.Model = squareModel2;
+		square2.Tranform.Translation = { 0.2f,0.5f,1.f };
+		square2.Tranform.Scale = glm::vec3{ 1 };
+		square2.Color = { 1.f,1.f,1.f };
+		m_Objects2D.push_back(std::move(square2));
 	}
    
 
